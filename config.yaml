@@ -1,0 +1,205 @@
+# 통합 시스템 설정 파일
+# AMR-Vision-Robot Integration System Configuration
+# 파일 위치: C:\Users\FAIR\Desktop\main\main\config.yaml
+
+System:
+  name: "AMR-Vision-Robot Integration System"
+  version: "2.0.0"
+  mode: "production"  # development, production
+
+MQTT:
+  broker: "127.0.0.1"  # localhost 또는 실제 브로커 IP
+  port: 1883
+  keepalive: 60
+  qos: 1  # 0: 최소 1회, 1: 정확히 1회, 2: 최대 1회
+  
+  # 토픽 구조: {component}/{action}/{status}
+  topics:
+    # AMR 관련
+    amr:
+      status: "amr/status"
+      arrived: "amr/arrived/{location}"  # location: grab_point, release_point, charging_point
+      moving: "amr/moving/{location}"
+      error: "amr/error"
+    
+    # 비전 시스템 관련
+    vision:
+      ready: "vision/ready"
+      detected: "vision/detected"
+      coordinates: "vision/coordinates/{type}"  # type: pick, place
+      error: "vision/error"
+    
+    # 로봇팔 관련
+    robot:
+      status: "robot/status"
+      ready: "robot/ready/{position}"  # position: home, scan, pick, place
+      picked: "robot/picked"
+      placed: "robot/placed"
+      error: "robot/error"
+    
+    # 시스템 제어
+    control:
+      start: "control/start"
+      stop: "control/stop"
+      reset: "control/reset"
+      mode: "control/mode/{type}"  # type: auto, manual
+
+# AMR (Autonomous Mobile Robot) 설정
+AMR:
+  host: "192.168.58.10"
+  port: 5000
+  timeout: 3.0
+  
+  # 위치 정의 [x, y, theta(도)]
+  positions:
+    grab_point: [1000.0, 0.0, 0.0]      # Grab_point 위치
+    release_point: [2000.0, 0.0, 0.0]   # Release_point 위치
+    charging_point: [0.0, 0.0, 0.0]     # Charging_point 위치
+    
+  # 이동 파라미터
+  navigation:
+    max_speed: 1.0  # m/s
+    acceleration: 0.5  # m/s²
+    position_tolerance: 0.05  # m
+    angle_tolerance: 5.0  # degrees
+    
+  # 정지 확인 파라미터
+  arrival:
+    check_interval: 1.0  # seconds
+    move_threshold: 0.015  # m (1.5cm)
+    consecutive_stops: 4  # 연속 정지 횟수
+    final_verification_time: 2.0  # seconds
+
+# 로봇팔 설정
+Robot:
+  ip: "192.168.58.2"
+  port: 8080  # Fair robot default port
+  
+  # 조인트 포지션 [J1, J2, J3, J4, J5, J6] (도)
+  positions:
+    home: [45.568, -127.937, 121.293, -83.629, -90.169, -1.238]
+    vision_scan: [46.257, -39.095, 41.934, -93.115, -90.168, -0.548]
+    pick_approach: [46.257, -39.095, 41.934, -93.115, -90.168, -0.548]
+    place_approach: [90.0, -45.0, 90.0, -45.0, -90.0, 0.0]
+  
+  # 그리퍼 설정
+  gripper:
+    index: 1
+    open_position: 100  # 0-100%
+    close_position: 40  # 0-100%
+    velocity: 50
+    force: 50
+    max_time: 5000  # ms
+    
+  # 동작 파라미터
+  motion:
+    velocity_fast: 100.0  # 0-100%
+    velocity_slow: 20.0
+    velocity_pick: 10.0
+    acceleration: 60.0
+    jerk: 100.0
+    blend_radius: 0.0
+    
+  # 툴 오프셋 (mm)
+  tool:
+    z_offset: 238.0  # 그리퍼 길이
+    approach_height: 50.0  # 접근 높이
+    grasp_depth: 115.0  # 파지 깊이
+    lift_height: 100.0  # 들어올리기 높이
+    
+  # 작업 공간 제약 (mm)
+  workspace:
+    max_reach: 600.0
+    min_z: -200.0
+    max_z: 500.0
+
+# 비전 시스템 설정
+Vision:
+  # 카메라 설정
+  camera:
+    type: "realsense"  # realsense, azure_kinect
+    width: 640
+    height: 480
+    fps: 30
+    depth_format: "z16"
+    color_format: "bgr8"
+    
+  # YOLO 모델 - 상대 경로 사용
+  model:
+    weights: "model/best.pt"  # C:\Users\FAIR\Desktop\main\main\model\best.pt
+    confidence: 0.5
+    device: "cpu"  # cpu, cuda
+    
+  # 카메라 캘리브레이션 (4x4 변환 행렬)
+  calibration:
+    # 45도 회전 변환 행렬
+    matrix: [
+      [0.7071, 0.7071, 0.0, 0.0],   # cos(45°) = sin(45°) = 0.7071
+      [0.7071, -0.7071, 0.0, 0.0],
+      [0.0, 0.0, 1.0, 0.0],
+      [0.0, 0.0, 0.0, 1.0]
+    ]
+    y_offset: -68.0  # mm
+    
+  # 탐지 파라미터
+  detection:
+    timeout: 5.0  # seconds
+    min_depth: 0.1  # m
+    max_depth: 2.0  # m
+    stabilization_frames: 2
+    
+  # 기존 설정과의 호환성
+  max_x: 1280
+  max_y: 720
+  median_x: 640
+  median_y: 360
+  safety_z: 400
+
+# 시스템 동작 모드
+Operation:
+  mode: "auto"  # auto, manual, test
+  cycle_count: 1  # 반복 횟수 (0: 무한)
+  
+  # 에러 처리
+  error_handling:
+    max_retries: 3
+    retry_delay: 2.0  # seconds
+    emergency_stop: true
+    
+  # 로깅
+  logging:
+    level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+    file: "logs/system.log"
+    max_size: 10485760  # 10MB
+    backup_count: 5
+    
+  # 안전 설정
+  safety:
+    enable_collision_check: true
+    enable_workspace_check: true
+    emergency_stop_topic: "safety/emergency_stop"
+
+# 상태 모니터링
+Monitoring:
+  enable: true
+  interval: 1.0  # seconds
+  metrics:
+    - amr_position
+    - robot_joint_angles
+    - gripper_status
+    - vision_fps
+    - mqtt_connection
+
+# Face 추적 옵션 (기존 호환성)
+Face_pred_option:
+  col_f: [0, 0, 255]      # face - 빨강 
+  col_l_out: [255, 0, 0]  # 랜드마크 바깥쪽(out) - 파랑
+  ocl_l_in: [0, 255, 0]   # 랜드마크 안쪽(in) - 초록
+  line_width: 2
+  circle_r: 2
+  fontSize: 2
+
+# 모드 설정 (기존 호환성)
+Mode:
+  Azure: 0  # Neck: 0 / Face: 1 / hand_track: 2 / runaway_mode_track: 3
+  Fair: 0   # Indy Action Type1(x,y,z): 0 / Indy Action Type2(u,v,w): 1
